@@ -17,6 +17,7 @@ limitations under the License.
 using Google.Apis.Http;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -33,7 +34,7 @@ namespace Google.Apis.Auth.OAuth2
     /// See <see cref="GetApplicationDefaultAsync"/> for the credential retrieval logic.
     /// </para>
     /// </summary>
-    public class GoogleCredential : ICredential
+    public class GoogleCredential : ICredential, ITokenAccessWithExtraInformation
     {
         /// <summary>Provider implements the logic for creating the application default credential.</summary>
         private static DefaultCredentialProvider defaultCredentialProvider = new DefaultCredentialProvider();
@@ -237,6 +238,11 @@ namespace Google.Apis.Auth.OAuth2
         {
             return credential.GetAccessTokenForRequestAsync(authUri, cancellationToken);
         }
+
+        IReadOnlyDictionary<string, string> ITokenAccessWithExtraInformation.ExtraInformation =>
+            (credential is ITokenAccessWithExtraInformation credentialWithExtra) ?
+            credentialWithExtra.ExtraInformation :
+            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
 
         /// <summary>
         /// Gets the underlying credential instance being wrapped.
