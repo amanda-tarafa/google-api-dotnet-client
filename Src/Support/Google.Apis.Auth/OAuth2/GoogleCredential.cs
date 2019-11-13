@@ -34,7 +34,7 @@ namespace Google.Apis.Auth.OAuth2
     /// See <see cref="GetApplicationDefaultAsync"/> for the credential retrieval logic.
     /// </para>
     /// </summary>
-    public class GoogleCredential : ICredential, ITokenAccessWithExtraInformation
+    public class GoogleCredential : ICredential, IProjectImpersonatorTokenAccess
     {
         /// <summary>Provider implements the logic for creating the application default credential.</summary>
         private static DefaultCredentialProvider defaultCredentialProvider = new DefaultCredentialProvider();
@@ -239,10 +239,10 @@ namespace Google.Apis.Auth.OAuth2
             return credential.GetAccessTokenForRequestAsync(authUri, cancellationToken);
         }
 
-        IReadOnlyDictionary<string, string> ITokenAccessWithExtraInformation.ExtraInformation =>
-            (credential is ITokenAccessWithExtraInformation credentialWithExtra) ?
-            credentialWithExtra.ExtraInformation :
-            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+        string IProjectImpersonatorTokenAccess.QuotaProjectId =>
+            (credential is IProjectImpersonatorTokenAccess impersonator) ?
+            impersonator.QuotaProjectId :
+            null;
 
         /// <summary>
         /// Gets the underlying credential instance being wrapped.

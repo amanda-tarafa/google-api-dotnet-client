@@ -33,18 +33,12 @@ namespace Google.Apis.Auth.OAuth2
     /// OAuth 2.0 credential for accessing protected resources using an access token, as well as optionally refreshing 
     /// the access token when it expires using a refresh token.
     /// </summary>
-    public class UserCredential : ICredential, IHttpExecuteInterceptor, IHttpUnsuccessfulResponseHandler, ITokenAccessWithExtraInformation
+    public class UserCredential : ICredential, IHttpExecuteInterceptor, IHttpUnsuccessfulResponseHandler, IProjectImpersonatorTokenAccess
     {
-        private const string QuotaProjectIdKey = "x-goog-user-project";
+        private const string QuotaProjectIdHeaderName = "x-goog-user-project";
 
         /// <summary>Logger for this class.</summary>
         protected static readonly ILogger Logger = ApplicationContext.Logger.ForType<UserCredential>();
-
-        /// <summary>
-        /// Dictionary containing the extra information accompanying this credential token.
-        /// <see cref="ITokenAccessWithExtraInformation.ExtraInformation"/>
-        /// </summary>
-        protected readonly IDictionary<string, string> _extraInformation = new Dictionary<string, string>();
 
         /// <summary>Gets or sets the token response which contains the access token.</summary>
         public TokenResponse Token
@@ -60,20 +54,7 @@ namespace Google.Apis.Auth.OAuth2
         public string UserId { get; }
 
         /// <inheritdoc/>
-        public IReadOnlyDictionary<string, string> ExtraInformation { get; }
-
-        /// <summary>
-        /// The ID of the project associated to this credential for the purposes of
-        /// quota calculation and billing.
-        /// </summary>
-        public string QuotaProjectId
-        {
-            get
-            {
-                ExtraInformation.TryGetValue(QuotaProjectId, out string quotaProjectId);
-                return quotaProjectId;
-            }
-        }
+        public string QuotaProjectId { get; }
 
         private readonly TokenRefreshManager _refreshManager;
 
@@ -90,12 +71,7 @@ namespace Google.Apis.Auth.OAuth2
             _refreshManager = new TokenRefreshManager(RefreshTokenAsync, flow.Clock, Logger);
             this.Token = token;
 
-            ExtraInformation = new ReadOnlyDictionary<string, string>(_extraInformation);
-
-            if(quotaProjectId != null)
-            {
-                _extraInformation.Add(QuotaProjectIdKey, quotaProjectId);
-            }
+            QuotaProjectId = quotaProjectId;
         }
 
         #region IHttpExecuteInterceptor
@@ -110,9 +86,9 @@ namespace Google.Apis.Auth.OAuth2
             var accessToken = await GetAccessTokenForRequestAsync(request.RequestUri.AbsoluteUri, taskCancellationToken).ConfigureAwait(false);
             Flow.AccessMethod.Intercept(request, Token.AccessToken);
 
-            foreach (var extraInfo in ExtraInformation)
+            if(QuotaProjectId != null)
             {
-                request.Headers.Add(extraInfo.Key, extraInfo.Value);
+                request.Headers.Add(QuotaProjectIdHeaderName, QuotaProjectId);
             }
         }
 
